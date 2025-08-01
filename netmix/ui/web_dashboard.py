@@ -43,7 +43,11 @@ def background_data_emitter():
     while True:
         payload = {}
         if connection_manager:
-            payload['health_data'] = connection_manager.get_health_data()
+            health_data = connection_manager.get_health_data()
+            # Convert deque to list for JSON serialization
+            for iface in health_data:
+                health_data[iface]['latencies'] = list(health_data[iface]['latencies'])
+            payload['health_data'] = health_data
 
         if zerotier_manager:
             payload['zerotier_data'] = {

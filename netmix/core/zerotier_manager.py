@@ -9,7 +9,7 @@ class ZeroTierManager:
     This class is a conceptual placeholder. A real implementation would require
     the ZeroTier One client to be installed and running on the host machine.
     It works by calling the `zerotier-cli` command-line tool and parsing
-    its JSON output.
+    its JSON output. It will gracefully handle the absence of the CLI tool.
     """
     def __init__(self, cli_path="zerotier-cli"):
         """
@@ -17,7 +17,10 @@ class ZeroTierManager:
             cli_path (str): The path to the zerotier-cli executable.
         """
         self.cli_path = cli_path
+        self.is_available = True # Assume the CLI is available until a check fails.
         logging.info("ZeroTier Manager initialized.")
+        # Perform an initial check to see if the CLI exists.
+        self._run_command('--version')
 
     def _run_command(self, *args):
         """
@@ -26,13 +29,26 @@ class ZeroTierManager:
         Returns:
             dict or None: The parsed JSON data, or None if an error occurs.
         """
+        if not self.is_available:
+            return None
+
         try:
-            # The -j flag is crucial as it provides machine-readable JSON output.
             command = [self.cli_path, '-j'] + list(args)
+            # For the version check, we don't want JSON output.
+            if args == ('--version',):
+                command = [self.cli_path] + list(args)
+
             result = subprocess.run(command, capture_output=True, text=True, check=True)
+
+            if args == ('--version',): # Don't try to parse version output as JSON
+                logging.info(f"Found ZeroTier version: {result.stdout.strip()}")
+                return {"version": result.stdout.strip()}
+
             return json.loads(result.stdout)
         except FileNotFoundError:
-            logging.error(f"'{self.cli_path}' not found. Is ZeroTier installed and in the system's PATH?")
+            if self.is_available: # Log the error only once
+                logging.error(f"'{self.cli_path}' not found. ZeroTier features will be disabled.")
+                self.is_available = False
             return None
         except subprocess.CalledProcessError as e:
             logging.error(f"Command '{' '.join(e.cmd)}' failed with exit code {e.returncode}: {e.stderr}")
@@ -46,7 +62,6 @@ class ZeroTierManager:
         Gets the status of the local ZeroTier node.
         Equivalent to `zerotier-cli -j info`.
         """
-        logging.info("Getting ZeroTier node status...")
         return self._run_command('info')
 
     def list_networks(self):
@@ -54,7 +69,6 @@ class ZeroTierManager:
         Lists all networks the local node has joined.
         Equivalent to `zerotier-cli -j listnetworks`.
         """
-        logging.info("Listing joined ZeroTier networks...")
         return self._run_command('listnetworks')
 
     def get_network_info(self, network_id):
@@ -74,20 +88,4 @@ class ZeroTierManager:
         Lists all peers known to the local node.
         Equivalent to `zerotier-cli -j listpeers`.
         """
-        logging.info("Listing ZeroTier peers...")
         return self._run_command('listpeers')
-
-# Example usage (for demonstration if ZeroTier were installed)
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
-    zt_manager = ZeroTierManager()
-
-    status = zt_manager.get_status()
-    if status:
-        print("\n--- Node Status ---")
-        print(json.dumps(status, indent=2))
-
-    networks = zt_manager.list_networks()
-    if networks:
-        print("\n--- Joined Networks ---")
-        print(json.dumps(networks, indent=2))
