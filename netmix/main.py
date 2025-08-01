@@ -170,8 +170,13 @@ if __name__ == '__main__':
         filemode='w'
     )
 
+    def start_app(stdscr):
+        """Sync wrapper to launch the asyncio event loop."""
+        asyncio.run(main(stdscr))
+
     try:
-        curses.wrapper(main)
+        # curses.wrapper takes a sync function, which in turn runs our async code.
+        curses.wrapper(start_app)
     except KeyboardInterrupt:
         logging.info("Program interrupted by user.")
     finally:
