@@ -23,6 +23,7 @@ This project is a Python-based SOCKS5 proxy designed for Windows that provides i
     ```sh
     pip install -r requirements.txt
     ```
+> **Note:** The `requirements.txt` file includes `windows-curses`, which is necessary for the dashboard to run on Windows. This dependency is installed only on Windows systems.
 
 ## How to Run
 
