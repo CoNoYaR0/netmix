@@ -17,3 +17,14 @@ The initial phase of the project focused on building a Minimum Viable Product fo
 
 ### Outcome:
 Phase 1 resulted in a functional, intelligent SOCKS5 proxy that successfully balances load and handles network failures. This strong foundation serves as the starting point for the expanded `netmix` vision.
+
+## 2025-08-01: Phase 2 - Architecture and Web UI
+
+With the core proxy functionality in place, the project was restructured for greater extensibility and the user interface was upgraded.
+
+### Key Accomplishments:
+- **Repository Restructure:** The project was reorganized into a `netmix` package with `core`, `ui`, and `agent` submodules to create a cleaner architecture.
+- **Connection Manager:** The `HealthChecker` was evolved into a comprehensive `ConnectionManager`, which now acts as the central source of truth for all network health statistics, including latency history and connection success/failure rates.
+- **Web Dashboard:** The `curses`-based CLI dashboard was replaced with a new web-based dashboard built with Flask and Flask-SocketIO. This provides a more robust and user-friendly interface, accessible at http://127.0.0.1:5000, which updates in real-time via WebSockets.
+- **ML-Powered Routing:** A full pipeline for optional machine learning-based routing was implemented. The `ConnectionManager` logs training data, a `train.py` script builds a model, and the `AIPredictor` uses the trained model if available.
+- **Packaging:** A `netmix.spec` file was created to allow for easy packaging of the entire application into a standalone Windows executable using PyInstaller.

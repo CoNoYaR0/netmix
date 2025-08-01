@@ -2,3 +2,5 @@ psutil
 windows-curses ; sys_platform == "win32"
 Flask
 Flask-SocketIO
+scikit-learn
+joblib

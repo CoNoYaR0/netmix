@@ -35,14 +35,40 @@ python -m netmix.main
 (Use `python3` if that is your default interpreter)
 
 - The proxy server will start listening on `127.0.0.1:1080`.
-- The terminal will display the live monitoring dashboard.
-- All log messages from the proxy are written to `proxy.log` in the root directory to avoid interfering with the dashboard UI.
+- The proxy server will start listening on `127.0.0.1:1080`.
+- The web dashboard will be available at **http://127.0.0.1:5000**.
+- All log messages are written to `netmix.log` in the root directory.
 
 To use the proxy, configure your application's SOCKS5 proxy settings to point to `127.0.0.1` on port `1080`.
 
-## Using the Dashboard
+## Using the Web Dashboard
 
-The dashboard will start automatically when you run the proxy.
+Once you run the application, open your web browser and navigate to **http://127.0.0.1:5000**.
 
-- It displays each detected network interface, its status (`GOOD`, `DEGRADED`, `DOWN`), its last measured latency in milliseconds, and the number of currently active connections being routed through it.
-- To exit the proxy and the dashboard, press **`q`**.
+- The dashboard provides a real-time view of each detected network interface.
+- It displays the status (`GOOD`, `DEGRADED`, `DOWN`), average latency, success rate, failure counts, and the number of active connections for each interface.
+- The data updates automatically via WebSockets.
+- To stop the entire application, press **`Ctrl+C`** in the terminal where it is running.
+
+## AI-Based Routing and Training
+
+The proxy uses a prediction agent (`netmix/agent/ai_predictor.py`) to choose the best interface. By default, it uses a simple heuristic. However, you can train a proper machine learning model for more intelligent routing.
+
+1.  **Data Collection:** As you run `netmix`, it will automatically log health and performance data for your interfaces into a `netmix_training_data.csv` file. Let the application run for a while under normal usage to collect a good dataset.
+2.  **Training the Model:** Once you have collected enough data, you can run the training script:
+    ```sh
+    python -m netmix.agent.train
+    ```
+    This will use the CSV data to train a RandomForest model and save it as `model.joblib`.
+3.  **Automatic Usage:** The next time you start `netmix`, it will automatically detect and load `model.joblib` and use it for predictions. If `model.joblib` is not found, it will revert to the default heuristic.
+
+## Building the Executable
+
+This project can be packaged into a single standalone executable for Windows using PyInstaller.
+
+1.  Ensure you have PyInstaller installed: `pip install pyinstaller`.
+2.  Run the build command from the root directory:
+    ```sh
+    pyinstaller netmix.spec
+    ```
+3.  The final `netmix.exe` file will be located in the `dist/netmix` directory.
