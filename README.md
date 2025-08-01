@@ -27,11 +27,12 @@ This project is a Python-based SOCKS5 proxy designed for Windows that provides i
 
 ## How to Run
 
-To run the proxy and the monitoring dashboard, execute the main script from the root directory:
+To run the proxy and the monitoring dashboard, execute the main script **from the project's root directory** using Python's `-m` flag to ensure the package is loaded correctly:
 
 ```sh
-python3 netmix/main.py
+python -m netmix.main
 ```
+(Use `python3` if that is your default interpreter)
 
 - The proxy server will start listening on `127.0.0.1:1080`.
 - The terminal will display the live monitoring dashboard.
