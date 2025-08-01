@@ -1,100 +1,105 @@
 import logging
 import random
+import joblib
+import pandas as pd
 
 class AIPredictor:
     """
-    A placeholder for an AI-based interface predictor.
+    An AI-based interface predictor.
 
-    In its initial version, this class uses a simple heuristic to determine the
-    best network interface. It is designed to be replaced with a proper
-    machine learning model in the future.
+    This class loads a pre-trained model to predict the best interface.
+    If no model is found, it falls back to using a simple heuristic.
     """
-    def __init__(self):
-        self.model = None # Placeholder for a real ML model
-        logging.info("AI Predictor initialized (Heuristic Mode).")
+    def __init__(self, model_path='model.joblib'):
+        self.model = None
+        self.model_path = model_path
+        try:
+            self.model = joblib.load(self.model_path)
+            logging.info(f"Successfully loaded pre-trained model from {self.model_path}")
+        except FileNotFoundError:
+            logging.warning(f"Model file not found at {self.model_path}. AIPredictor will use a fallback heuristic.")
+            logging.warning("To use the ML model, run `python -m netmix.agent.train` on a generated data log.")
+        except Exception as e:
+            logging.error(f"Error loading model: {e}. Falling back to heuristic.")
 
-    def train(self, historical_data):
-        """
-        Placeholder for training a machine learning model.
+    def _extract_features(self, health_data):
+        """Prepares the input data into a DataFrame for prediction."""
+        features_list = []
+        for name, data in health_data.items():
+            # Calculate rolling averages/sums from the deque
+            latencies = list(data['latencies'])
+            latency_avg_5 = pd.Series(latencies).rolling(5, min_periods=1).mean().iloc[-1] if latencies else 9999
 
-        Args:
-            historical_data: A dataset of interface metrics and outcomes.
-        """
-        logging.info("Training placeholder: In a real scenario, model training would occur here.")
-        # For now, we do nothing.
-        pass
+            # This is a simplification; in a real scenario, failure history would also be a deque
+            failures_rolling_5 = data['failures']
 
-    def load_model(self, path):
-        """
-        Placeholder for loading a pre-trained model from a file.
-        """
-        logging.info(f"Loading model from {path}... (Placeholder)")
-        # In a real scenario, you would deserialize a model file here.
-        self.model = "dummy_model"
+            features_list.append({
+                'interface_name': name,
+                'latency_avg_5': latency_avg_5,
+                'failures_rolling_5': failures_rolling_5,
+                'successes': data['successes'],
+                'active_conns': data['active_conns']
+            })
+        return pd.DataFrame(features_list)
 
     def predict_best_interface(self, interface_health_data):
         """
-        Predicts the best interface to use based on historical health data.
-
-        Args:
-            interface_health_data (dict): A dictionary where keys are interface names
-                and values are dicts of their metrics, e.g.:
-                {
-                    'Wi-Fi': {'latencies': [50, 55, 60], 'successes': 100, 'failures': 2},
-                    'Ethernet': {'latencies': [10, 12, 11], 'successes': 250, 'failures': 0}
-                }
-
-        Returns:
-            str: The name of the predicted best interface, or None if no data is available.
+        Predicts the best interface to use based on a pre-trained model or a heuristic.
         """
         if not interface_health_data:
             return None
 
-        # If we had a real model, we would use it here.
+        # --- ML Model Prediction ---
         if self.model:
-            # features = self._extract_features(interface_health_data)
-            # prediction = self.model.predict(features)
-            # return prediction
-            pass
+            df = self._extract_features(interface_health_data)
+            if df.empty: return None
 
-        # --- Heuristic Logic ---
+            features = ['latency_avg_5', 'failures_rolling_5', 'successes', 'active_conns']
+            X = df[features]
+
+            # Get probability of being the 'best' interface (class 1)
+            probabilities = self.model.predict_proba(X)[:, 1]
+            best_index = probabilities.argmax()
+            best_interface = df.iloc[best_index]['interface_name']
+
+            logging.info(f"ML Model predicted best interface: '{best_interface}'")
+            return best_interface
+
+        # --- Heuristic Logic (Fallback) ---
         best_interface = None
-        best_score = -1
+        best_score = float('inf') # Lower is better
 
         for name, data in interface_health_data.items():
-            if not data['latencies']:
+            latencies = list(data['latencies'])
+            if not latencies:
                 avg_latency = 9999
             else:
-                avg_latency = sum(data['latencies']) / len(data['latencies'])
+                avg_latency = sum(latencies) / len(latencies)
 
             total_attempts = data['successes'] + data['failures']
-            if total_attempts == 0:
-                success_rate = 0
-            else:
-                success_rate = data['successes'] / total_attempts
+            success_rate = (data['successes'] / total_attempts) if total_attempts > 0 else 1.0
 
-            # Simple scoring: lower latency is better, higher success rate is better.
-            # We want to minimize the score. Latency is weighted more heavily.
-            # Add a small random factor to break ties and explore.
-            score = (avg_latency * 0.7) - (success_rate * 0.3) + random.uniform(-1, 1)
+            # Score to minimize: weighted latency minus success rate bonus
+            score = (avg_latency * 0.8) - (success_rate * 20)
 
-            logging.info(f"Interface '{name}': score={score:.2f} (avg_latency={avg_latency:.2f}, success_rate={success_rate:.2%})")
+            logging.debug(f"Heuristic score for '{name}': {score:.2f}")
 
-            if best_interface is None or score < best_score:
+            if score < best_score:
                 best_score = score
                 best_interface = name
 
-        logging.info(f"AI Prediction for best interface: '{best_interface}'")
+        logging.info(f"Heuristic predicted best interface: '{best_interface}'")
         return best_interface
 
 if __name__ == '__main__':
-    # Example usage for testing
+    # This block now demonstrates the fallback heuristic, as no model exists by default.
+    logging.basicConfig(level=logging.INFO)
     dummy_health_data = {
-        'Wi-Fi': {'latencies': [80, 90, 100, 120], 'successes': 50, 'failures': 5},
-        'Ethernet': {'latencies': [10, 12, 11, 15], 'successes': 200, 'failures': 0},
-        '4G LTE': {'latencies': [150, 200, 180], 'successes': 20, 'failures': 10}
+        'Wi-Fi': {'latencies': [80, 90, 100, 120], 'successes': 50, 'failures': 5, 'active_conns': 3},
+        'Ethernet': {'latencies': [10, 12, 11, 15], 'successes': 200, 'failures': 0, 'active_conns': 10},
+        '4G LTE': {'latencies': [150, 200, 180], 'successes': 20, 'failures': 10, 'active_conns': 1}
     }
 
     predictor = AIPredictor()
     best = predictor.predict_best_interface(dummy_health_data)
-    print(f"\nPredicted best interface: {best}")
+    print(f"\nPredicted best interface (heuristic): {best}")

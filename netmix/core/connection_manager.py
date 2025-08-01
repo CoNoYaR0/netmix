@@ -1,6 +1,8 @@
 import asyncio
 import time
 import logging
+import csv
+import os
 from collections import deque
 
 class ConnectionManager:
@@ -47,19 +49,6 @@ class ConnectionManager:
             logging.warning(f"Latency check failed for IP {local_ip}: {e}")
             return 9999.0
 
-    async def run_health_checks(self):
-        """Periodically checks the latency of all interfaces."""
-        self.running = True
-        logging.info("Connection Manager's health checker started.")
-        while self.running:
-            for name, ip in self.interfaces.items():
-                latency = await self.check_latency(ip)
-                async with self.lock:
-                    self.health_data[name]['latencies'].append(latency)
-                logging.info(f"Latency for {name} ({ip}): {latency:.2f} ms")
-
-            await asyncio.sleep(self.check_interval)
-
     def stop_health_checks(self):
         self.running = False
 
@@ -86,3 +75,41 @@ class ConnectionManager:
     def get_health_data(self):
         # No lock needed for a simple read, as it's an atomic operation in Python.
         return self.health_data
+
+    def _log_to_csv(self, data_row):
+        """Appends a row of data to the training log file."""
+        log_file = 'netmix_training_data.csv'
+        write_header = not os.path.exists(log_file)
+
+        with open(log_file, 'a', newline='') as f:
+            writer = csv.writer(f)
+            if write_header:
+                writer.writerow(['timestamp', 'interface_name', 'latency', 'successes', 'failures', 'active_conns'])
+            writer.writerow(data_row)
+
+    async def run_health_checks(self):
+        """Periodically checks the latency of all interfaces and logs data."""
+        self.running = True
+        logging.info("Connection Manager's health checker started.")
+        while self.running:
+            for name, ip in self.interfaces.items():
+                latency = await self.check_latency(ip)
+                timestamp = time.time()
+
+                async with self.lock:
+                    health_snapshot = self.health_data[name]
+                    health_snapshot['latencies'].append(latency)
+
+                    # Log the state *before* this check for training purposes
+                    self._log_to_csv([
+                        timestamp,
+                        name,
+                        latency,
+                        health_snapshot['successes'],
+                        health_snapshot['failures'],
+                        health_snapshot['active_conns']
+                    ])
+
+                logging.info(f"Latency for {name} ({ip}): {latency:.2f} ms")
+
+            await asyncio.sleep(self.check_interval)
