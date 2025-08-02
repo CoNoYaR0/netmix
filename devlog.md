@@ -30,6 +30,12 @@ With the core proxy functionality in place, the project was restructured for gre
 - **Packaging:** A `netmix.spec` file was created to allow for easy packaging of the entire application into a standalone Windows executable using PyInstaller.
 - **ZeroTier API Integration:** The initial `zerotier-cli` wrapper was replaced with a much more robust `ZeroTierAPI` agent that communicates directly with the ZeroTier One local REST API, removing PATH dependencies and improving stability.
 
+### Post-Phase 2 Bug Fixes
+- **Corrected Project Structure:** Fixed a `ModuleNotFoundError` by properly separating the main application runner (`main.py`) from the SOCKS proxy class definition (`core/socks_proxy.py`).
+- **Fixed `curses` and `asyncio` Integration:** Resolved a `RuntimeWarning` by implementing a synchronous wrapper function to correctly launch the asyncio event loop from the `curses` library.
+- **Fixed JSON Serialization:** Resolved a `TypeError` in the web dashboard by converting `collections.deque` objects to `lists` before emitting them over WebSockets.
+- **Robust ZeroTier Discovery:** Hardened the `ZeroTierAPI` agent against `FileNotFoundError` by improving the auto-detection logic for the `zerotier-cli` executable and then replacing it entirely with a direct API client to avoid PATH issues.
+
 ## 2025-08-01: Phase 3 - Network Bonding and Advanced Features
 
 This phase begins the work on the most advanced features, starting with the foundational step of connecting to a virtual network to enable future bonding experiments.
