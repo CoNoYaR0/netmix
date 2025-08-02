@@ -51,6 +51,16 @@ def main_sync():
     proxy = SocksProxy('127.0.0.1', 1080, conn_manager, predictor)
     try:
         zt_api = ZeroTierAPI()
+        # Attempt to join the configured network on startup
+        network_to_join = os.getenv('ZEROTIER_NETWORK_ID')
+        if network_to_join:
+            logging.info(f"Attempting to join configured ZeroTier network: {network_to_join}")
+            try:
+                zt_api.join_network(network_to_join)
+                logging.info(f"Successfully sent request to join network {network_to_join}.")
+            except Exception as join_error:
+                logging.error(f"Failed to join network {network_to_join}: {join_error}")
+
     except Exception as e:
         logging.error(f"Failed to initialize ZeroTier API: {e}. Continuing without it.")
         zt_api = None
