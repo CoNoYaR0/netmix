@@ -90,6 +90,32 @@ class AIPredictor:
         logging.info(f"Heuristic predicted best interface: '{best_interface}'")
         return best_interface
 
+    def get_suitable_interfaces(self, interface_health_data, latency_threshold=500, success_rate_threshold=0.8):
+        """
+        Gets a list of all interfaces that are considered 'healthy'.
+        """
+        if not interface_health_data:
+            return []
+
+        suitable_interfaces = []
+        for name, data in interface_health_data.items():
+            latencies = list(data['latencies'])
+            if not latencies:
+                avg_latency = 9999
+            else:
+                avg_latency = sum(latencies) / len(latencies)
+
+            total_attempts = data['successes'] + data['failures']
+            success_rate = (data['successes'] / total_attempts) if total_attempts > 0 else 1.0
+
+            if avg_latency < latency_threshold and success_rate >= success_rate_threshold:
+                suitable_interfaces.append(name)
+
+        logging.info(f"Found {len(suitable_interfaces)} suitable interfaces: {suitable_interfaces}")
+        # Shuffle the list to provide some basic load balancing
+        random.shuffle(suitable_interfaces)
+        return suitable_interfaces
+
 if __name__ == '__main__':
     # This block now demonstrates the fallback heuristic, as no model exists by default.
     logging.basicConfig(level=logging.INFO)

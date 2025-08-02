@@ -96,20 +96,25 @@ class SocksProxy:
 
     async def connect_to_destination(self, dest_addr, dest_port):
         """
-        Uses the AI predictor to choose an interface and attempts to connect.
+        Uses the AI predictor to get a pool of suitable interfaces and attempts
+        to connect, distributing load across them.
         Records successes and failures with the ConnectionManager.
         """
         health_data = self.connection_manager.get_health_data()
-        attempt_data = dict(health_data)
+        suitable_interfaces = self.predictor.get_suitable_interfaces(health_data)
 
-        for _ in range(len(self.connection_manager.interfaces)):
-            iface_name = self.predictor.predict_best_interface(attempt_data)
-            if not iface_name:
-                logging.error("AI Predictor returned no interface.")
-                break
+        if not suitable_interfaces:
+            logging.error("Predictor returned no suitable interfaces. Trying all known interfaces as a last resort.")
+            # Fallback to all interfaces if none are deemed suitable
+            suitable_interfaces = list(self.connection_manager.interfaces.keys())
 
+        for iface_name in suitable_interfaces:
             local_ip = self.connection_manager.interfaces.get(iface_name)
-            logging.info(f"Attempting connection to {dest_addr}:{dest_port} via predicted interface '{iface_name}'")
+            if not local_ip:
+                logging.warning(f"Could not find IP for interface '{iface_name}'. Skipping.")
+                continue
+
+            logging.info(f"Attempting connection to {dest_addr}:{dest_port} via interface '{iface_name}'")
             try:
                 local_addr = (local_ip, 0)
                 reader, writer = await asyncio.wait_for(
@@ -119,12 +124,11 @@ class SocksProxy:
                 await self.connection_manager.record_success(iface_name)
                 return reader, writer, iface_name
             except (OSError, asyncio.TimeoutError) as e:
-                logging.warning(f"Connection via {iface_name} failed: {e}. Recording failure.")
+                logging.warning(f"Connection via {iface_name} failed: {e}. Recording failure and trying next.")
                 await self.connection_manager.record_failure(iface_name)
-                attempt_data[iface_name]['failures'] += 1
                 continue
 
-        logging.error(f"All available interfaces failed to connect to {dest_addr}:{dest_port}.")
+        logging.error(f"All suitable interfaces failed to connect to {dest_addr}:{dest_port}.")
         return None, None, None
 
     async def start(self):
