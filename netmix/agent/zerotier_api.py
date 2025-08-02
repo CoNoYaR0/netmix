@@ -1,3 +1,4 @@
+import os
 import logging
 import requests
 from dotenv import load_dotenv
@@ -19,7 +20,6 @@ class ZeroTierAPI:
         Pulls configuration from environment variables by default, but can be
         overridden with direct arguments.
         """
-        import os # Local import for debugging
         self.api_url = api_url or os.getenv('ZT_API', 'http://127.0.0.1:9993')
         self._auth_token = auth_token or os.getenv('ZT_TOKEN')
 
@@ -35,7 +35,6 @@ class ZeroTierAPI:
 
     def _load_token_from_file(self):
         """Loads the auth token from the default location on Windows."""
-        import os # Local import for debugging
         if os.name != 'nt':
             return None # This path is specific to Windows
 
