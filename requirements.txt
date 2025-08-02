@@ -3,6 +3,8 @@ windows-curses ; sys_platform == "win32"
 Flask
 Flask-SocketIO
 scikit-learn
+xgboost
 joblib
 requests
 python-dotenv
+pandas

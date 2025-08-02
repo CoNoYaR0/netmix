@@ -1,6 +1,6 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
+import xgboost as xgb
 from sklearn.metrics import accuracy_score
 import joblib
 import logging
@@ -55,8 +55,17 @@ def train_model(data_path='netmix_training_data.csv', model_path='model.joblib')
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-    logging.info(f"Training RandomForestClassifier on {len(X_train)} samples...")
-    model = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
+    logging.info(f"Training XGBClassifier on {len(X_train)} samples...")
+    # XGBoost is good for imbalanced datasets, scale_pos_weight is a key param
+    # scale_pos_weight = count(negative class) / count(positive class)
+    scale_pos_weight = (y_train == 0).sum() / (y_train == 1).sum()
+    model = xgb.XGBClassifier(
+        n_estimators=100,
+        random_state=42,
+        use_label_encoder=False,
+        eval_metric='logloss',
+        scale_pos_weight=scale_pos_weight
+    )
     model.fit(X_train, y_train)
 
     # --- Evaluation ---
