@@ -106,6 +106,7 @@ class ConnectionManager:
         self.running = True
         logging.info("Connection Manager's health checker started.")
         while self.running:
+            failed_checks = 0
             for name, ip in self.interfaces.items():
                 host_to_check = self.check_host
                 port_to_check = self.check_port
@@ -131,6 +132,9 @@ class ConnectionManager:
                 latency = await self.check_latency(ip, host_to_check, port_to_check)
                 timestamp = time.time()
 
+                if latency >= 9999.0:
+                    failed_checks += 1
+
                 async with self.lock:
                     health_snapshot = self.health_data[name]
                     health_snapshot['latencies'].append(latency)
@@ -147,4 +151,9 @@ class ConnectionManager:
 
                 logging.info(f"Latency for {name} ({ip}): {latency:.2f} ms")
 
-            await asyncio.sleep(self.check_interval)
+            # If all interfaces failed, we might be offline. Pause for a while.
+            if len(self.interfaces) > 0 and failed_checks == len(self.interfaces):
+                logging.warning("All interfaces failed latency checks. Possible network outage. Pausing checks for 60 seconds.")
+                await asyncio.sleep(60)
+            else:
+                await asyncio.sleep(self.check_interval)

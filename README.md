@@ -25,7 +25,11 @@ This is the current phase, focused on implementing advanced networking features 
     - **Full Offline Mode:** Ensure the application can run without any reliance on external APIs.
     - **Packaging & Distribution:** Finalize the `.exe` package and create an auto-updater.
 
-### Phase 4: Hardening & Remote Access (Planned)
+### Phase 4: Automatic Traffic Capture (Planned)
+- **Planned Features:**
+    - **Automatic System-Wide Proxy:** Implement a mechanism to automatically capture all system network traffic, removing the need for manual SOCKS5 configuration in applications. This may involve programmatically setting system proxy settings or creating a virtual network adapter.
+
+### Phase 5: Hardening & Remote Access (Planned)
 - **Planned Features:**
     - **Remote Dashboard Access:** Add optional HTTPS and authentication to the web dashboard.
 
