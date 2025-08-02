@@ -58,6 +58,9 @@ def background_data_emitter():
                     try:
                         # This call might fail if the node hasn't fully joined yet
                         managed_network_details = zerotier_api.get_network(managed_network_id)
+                        if managed_network_details:
+                            # Ensure displayName key exists to prevent JS errors.
+                            managed_network_details.setdefault('displayName', '')
                     except Exception:
                         managed_network_details = {
                             'id': managed_network_id,

@@ -84,7 +84,7 @@ def main_sync():
         return
 
     # --- Initialize Core Components with all interfaces ---
-    conn_manager = ConnectionManager(interfaces)
+    conn_manager = ConnectionManager(interfaces, zt_api=zt_api)
     predictor = AIPredictor()
     proxy = SocksProxy('127.0.0.1', 1080, conn_manager, predictor)
 

@@ -3,6 +3,7 @@ import time
 import logging
 import csv
 import os
+import re
 from collections import deque
 
 class ConnectionManager:
@@ -13,11 +14,12 @@ class ConnectionManager:
     including latency history, success/failure rates, and active connection counts.
     It is designed to be thread-safe.
     """
-    def __init__(self, interfaces, check_interval=10, history_len=20):
+    def __init__(self, interfaces, check_interval=10, history_len=20, zt_api=None):
         self.interfaces = interfaces
         self.check_interval = check_interval
         self.history_len = history_len
-        self.check_host = 'www.google.com'
+        self.zt_api = zt_api  # ZeroTier API client
+        self.check_host = 'www.google.com'  # Default host for non-ZT interfaces
         self.check_port = 80
         self.running = False
         self.lock = asyncio.Lock()
@@ -33,12 +35,12 @@ class ConnectionManager:
 
         logging.info(f"Connection Manager initialized for interfaces: {list(self.interfaces.keys())}")
 
-    async def check_latency(self, local_ip):
+    async def check_latency(self, local_ip, host, port):
         """Measures latency by timing a TCP connection and returns it in ms."""
         try:
             start_time = time.monotonic()
             reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(self.check_host, self.check_port, local_addr=(local_ip, 0)),
+                asyncio.open_connection(host, port, local_addr=(local_ip, 0)),
                 timeout=3
             )
             end_time = time.monotonic()
@@ -46,7 +48,7 @@ class ConnectionManager:
             await writer.wait_closed()
             return (end_time - start_time) * 1000
         except (OSError, asyncio.TimeoutError) as e:
-            logging.warning(f"Latency check failed for IP {local_ip}: {e}")
+            logging.warning(f"Latency check failed for IP {local_ip} against host {host}: {e}")
             return 9999.0
 
     def stop_health_checks(self):
@@ -93,7 +95,28 @@ class ConnectionManager:
         logging.info("Connection Manager's health checker started.")
         while self.running:
             for name, ip in self.interfaces.items():
-                latency = await self.check_latency(ip)
+                host_to_check = self.check_host
+                port_to_check = self.check_port
+
+                # If this is a ZeroTier interface, try to find its gateway for a more reliable health check.
+                if self.zt_api and 'zerotier' in name.lower():
+                    logging.debug(f"Interface '{name}' is a ZeroTier adapter. Attempting to find its gateway.")
+                    match = re.search(r'\[([a-f0-9]{16})\]', name, re.IGNORECASE)
+                    if match:
+                        network_id = match.group(1)
+                        try:
+                            network_details = self.zt_api.get_network(network_id)
+                            # Find the default route (0.0.0.0/0)
+                            default_route = next((r for r in network_details.get('routes', []) if r.get('target') == '0.0.0.0/0' and r.get('via')), None)
+                            if default_route and default_route.get('via'):
+                                host_to_check = default_route['via']
+                                logging.info(f"Using ZeroTier gateway {host_to_check} for latency check on '{name}'.")
+                            else:
+                                logging.info(f"No default route configured for ZT network {network_id}. Using default check host.")
+                        except Exception as e:
+                            logging.warning(f"Could not retrieve ZT network details for '{network_id}': {e}. Using default check host.")
+
+                latency = await self.check_latency(ip, host_to_check, port_to_check)
                 timestamp = time.time()
 
                 async with self.lock:
