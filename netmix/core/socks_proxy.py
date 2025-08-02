@@ -4,13 +4,22 @@ import logging
 
 SOCKS_VERSION = 5
 
-async def forward_data(reader, writer, direction):
-    """Reads data from a reader and writes it to a writer, effectively proxying the stream."""
+async def forward_data(reader, writer, direction, connection_manager, interface_name):
+    """
+    Reads data from a reader, writes it to a writer, and reports bandwidth usage.
+    """
     try:
         while True:
             data = await reader.read(4096)
             if not data:
                 break
+
+            num_bytes = len(data)
+            if direction == 'client->remote':
+                await connection_manager.record_bytes_sent(interface_name, num_bytes)
+            else:  # remote->client
+                await connection_manager.record_bytes_received(interface_name, num_bytes)
+
             writer.write(data)
             await writer.drain()
     except asyncio.CancelledError:
@@ -70,8 +79,8 @@ class SocksProxy:
             client_writer.write(reply); await client_writer.drain()
 
             await asyncio.gather(
-                forward_data(client_reader, remote_writer, "client->remote"),
-                forward_data(remote_reader, client_writer, "remote->client")
+                forward_data(client_reader, remote_writer, "client->remote", self.connection_manager, iface_name_used),
+                forward_data(remote_reader, client_writer, "remote->client", self.connection_manager, iface_name_used)
             )
 
         except (ConnectionAbortedError, ConnectionResetError, asyncio.IncompleteReadError) as e:

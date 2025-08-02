@@ -30,7 +30,9 @@ class ConnectionManager:
                 'latencies': deque(maxlen=self.history_len),
                 'successes': 0,
                 'failures': 0,
-                'active_conns': 0
+                'active_conns': 0,
+                'bytes_sent': 0,
+                'bytes_received': 0
             }
 
         logging.info(f"Connection Manager initialized for interfaces: {list(self.interfaces.keys())}")
@@ -63,6 +65,16 @@ class ConnectionManager:
         if interface_name in self.health_data:
             async with self.lock:
                 self.health_data[interface_name]['failures'] += 1
+
+    async def record_bytes_sent(self, interface_name, num_bytes):
+        if interface_name in self.health_data:
+            async with self.lock:
+                self.health_data[interface_name]['bytes_sent'] += num_bytes
+
+    async def record_bytes_received(self, interface_name, num_bytes):
+        if interface_name in self.health_data:
+            async with self.lock:
+                self.health_data[interface_name]['bytes_received'] += num_bytes
 
     async def increment_active_conn(self, interface_name):
         if interface_name in self.health_data:

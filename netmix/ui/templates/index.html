@@ -34,6 +34,8 @@
                 <th>Success Rate</th>
                 <th>Failures</th>
                 <th>Active Connections</th>
+                <th>Downstream</th>
+                <th>Upstream</th>
             </tr>
         </thead>
         <tbody id="interfaces-body">
@@ -45,6 +47,15 @@
     <script>
         document.addEventListener('DOMContentLoaded', (event) => {
             const socket = io.connect('http://' + document.domain + ':' + location.port + '/dashboard');
+
+            function formatBytes(bytes, decimals = 2) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const dm = decimals < 0 ? 0 : decimals;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+            }
 
             socket.on('connect', () => {
                 console.log('Connected to Netmix WebSocket!');
@@ -67,7 +78,16 @@
                     let status = 'DOWN';
                     if (avgLatency !== 'N/A' && parseFloat(avgLatency) < 100) status = 'GOOD';
                     else if (avgLatency !== 'N/A' && parseFloat(avgLatency) < 1000) status = 'DEGRADED';
-                    const row = `<tr><td>${name}</td><td class="status-${status}">${status}</td><td>${avgLatency}</td><td>${successRate}</td><td>${stats.failures}</td><td>${stats.active_conns}</td></tr>`;
+                    const row = `<tr>
+                        <td>${name}</td>
+                        <td class="status-${status}">${status}</td>
+                        <td>${avgLatency}</td>
+                        <td>${successRate}</td>
+                        <td>${stats.failures}</td>
+                        <td>${stats.active_conns}</td>
+                        <td>${formatBytes(stats.bytes_received)}</td>
+                        <td>${formatBytes(stats.bytes_sent)}</td>
+                    </tr>`;
                     tbody.innerHTML += row;
                 }
 
