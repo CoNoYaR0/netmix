@@ -29,3 +29,10 @@ With the core proxy functionality in place, the project was restructured for gre
 - **ML-Powered Routing:** A full pipeline for optional machine learning-based routing was implemented. The `ConnectionManager` logs training data, a `train.py` script builds a model, and the `AIPredictor` uses the trained model if available.
 - **Packaging:** A `netmix.spec` file was created to allow for easy packaging of the entire application into a standalone Windows executable using PyInstaller.
 - **ZeroTier API Integration:** The initial `zerotier-cli` wrapper was replaced with a much more robust `ZeroTierAPI` agent that communicates directly with the ZeroTier One local REST API, removing PATH dependencies and improving stability.
+
+## 2025-08-01: Phase 3 - Network Bonding and Advanced Features
+
+This phase begins the work on the most advanced features, starting with the foundational step of connecting to a virtual network to enable future bonding experiments.
+
+### Key Accomplishments:
+- **ZeroTier Auto-Join:** The application can now be configured with a `ZEROTIER_NETWORK_ID` in the `.env` file. On startup, it will automatically send a request to join this network, enabling persistent virtual network presence.
