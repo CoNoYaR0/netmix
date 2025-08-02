@@ -1,7 +1,6 @@
 import logging
 import random
 import joblib
-import pandas as pd
 
 class AIPredictor:
     """
@@ -23,24 +22,22 @@ class AIPredictor:
             logging.error(f"Error loading model: {e}. Falling back to heuristic.")
 
     def _extract_features(self, health_data):
-        """Prepares the input data into a DataFrame for prediction."""
+        """Prepares the input data into a list of dictionaries for prediction."""
         features_list = []
         for name, data in health_data.items():
-            # Calculate rolling averages/sums from the deque
             latencies = list(data['latencies'])
-            latency_avg_5 = pd.Series(latencies).rolling(5, min_periods=1).mean().iloc[-1] if latencies else 9999
-
-            # This is a simplification; in a real scenario, failure history would also be a deque
-            failures_rolling_5 = data['failures']
+            # Get the last 5 latencies for a simple rolling average
+            last_5_latencies = latencies[-5:]
+            latency_avg_5 = sum(last_5_latencies) / len(last_5_latencies) if last_5_latencies else 9999
 
             features_list.append({
                 'interface_name': name,
                 'latency_avg_5': latency_avg_5,
-                'failures_rolling_5': failures_rolling_5,
+                'failures_rolling_5': data['failures'],  # The model expects this feature name
                 'successes': data['successes'],
                 'active_conns': data['active_conns']
             })
-        return pd.DataFrame(features_list)
+        return features_list
 
     def predict_best_interface(self, interface_health_data):
         """
@@ -51,16 +48,18 @@ class AIPredictor:
 
         # --- ML Model Prediction ---
         if self.model:
-            df = self._extract_features(interface_health_data)
-            if df.empty: return None
+            features_list = self._extract_features(interface_health_data)
+            if not features_list:
+                return None
 
-            features = ['latency_avg_5', 'failures_rolling_5', 'successes', 'active_conns']
-            X = df[features]
+            # Prepare data for the model (must be in the same order as trained)
+            features_order = ['latency_avg_5', 'failures_rolling_5', 'successes', 'active_conns']
+            X = [[d[f] for f in features_order] for d in features_list]
 
             # Get probability of being the 'best' interface (class 1)
             probabilities = self.model.predict_proba(X)[:, 1]
             best_index = probabilities.argmax()
-            best_interface = df.iloc[best_index]['interface_name']
+            best_interface = features_list[best_index]['interface_name']
 
             logging.info(f"ML Model predicted best interface: '{best_interface}'")
             return best_interface

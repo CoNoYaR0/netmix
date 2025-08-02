@@ -74,19 +74,32 @@
                 // Update ZeroTier Status
                 const zt_data = payload.zerotier_data || {};
                 const zt_div = document.getElementById('zerotier-status');
-                if (zt_data.status && zt_data.status.address) {
-                    let networks_html = '<ul>';
-                    if (zt_data.networks && zt_data.networks.length > 0) {
-                        zt_data.networks.forEach(net => {
-                            networks_html += `<li>${net.id} (${net.displayName}): ${net.status}</li>`;
-                        });
+
+                if (zt_data.error) {
+                    zt_div.innerHTML = `<h2>ZeroTier Status</h2><p>Error: ${zt_data.error}</p>`;
+                } else if (zt_data.status && zt_data.managed_network) {
+                    const node_status = zt_data.status.online ? 'ONLINE' : 'OFFLINE';
+                    const net = zt_data.managed_network;
+                    let details_html = `<h2>ZeroTier Status: <span class="status-${node_status === 'ONLINE' ? 'GOOD' : 'DOWN'}">${node_status}</span></h2>`;
+
+                    if (net.error) {
+                        details_html += `<p><strong>Managed Network:</strong> ${net.id}</p><p><strong>Status:</strong> <span class="status-DEGRADED">${net.status}</span> (${net.error})</p>`;
                     } else {
-                        networks_html += '<li>No networks joined.</li>';
+                        const ip = net.assignedAddresses ? (net.assignedAddresses.find(a => a.includes('.')) || 'N/A').split('/')[0] : 'N/A';
+                        const status_class = net.status === 'OK' ? 'GOOD' : 'DEGRADED';
+                        details_html += `
+                            <p><strong>Managed Network:</strong> ${net.id} (${net.displayName || ''})</p>
+                            <p><strong>Status:</strong> <span class="status-${status_class}">${net.status}</span></p>
+                            <p><strong>Virtual IP:</strong> ${ip}</p>
+                        `;
                     }
-                    networks_html += '</ul>';
-                    zt_div.innerHTML = `<h2>ZeroTier Status: <span class="status-${zt_data.status.online ? 'GOOD' : 'DOWN'}">${zt_data.status.online ? 'ONLINE' : 'OFFLINE'}</span></h2><p>Address: ${zt_data.status.address}</p><h3>Joined Networks:</h3>${networks_html}`;
-                } else {
-                    zt_div.innerHTML = '<h2>ZeroTier Status</h2><p>Could not retrieve status. Is ZeroTier installed and running?</p>';
+                    zt_div.innerHTML = details_html;
+                } else if (zt_data.status) {
+                    const node_status = zt_data.status.online ? 'ONLINE' : 'OFFLINE';
+                    zt_div.innerHTML = `<h2>ZeroTier Status: <span class="status-${node_status === 'ONLINE' ? 'GOOD' : 'DOWN'}">${node_status}</span></h2><p>No managed network configured in .env file.</p>`;
+                }
+                else {
+                    zt_div.innerHTML = '<h2>ZeroTier Status</h2><p>Could not retrieve status. Is the ZeroTier client running?</p>';
                 }
             });
         });

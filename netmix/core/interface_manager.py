@@ -24,6 +24,25 @@ def get_active_interfaces():
 
     return active_interfaces
 
+
+def get_interface_name_by_ip(ip_address):
+    """
+    Finds the name of a network interface that has been assigned a specific IP address.
+
+    Args:
+        ip_address (str): The IPv4 address to search for.
+
+    Returns:
+        str or None: The name of the interface if found, otherwise None.
+    """
+    if_addrs = psutil.net_if_addrs()
+    for name, addrs in if_addrs.items():
+        for addr in addrs:
+            if addr.family == socket.AF_INET and addr.address == ip_address:
+                return name
+    return None
+
+
 if __name__ == '__main__':
     interfaces = get_active_interfaces()
     if interfaces:
