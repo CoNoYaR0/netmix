@@ -14,6 +14,14 @@ This project is a Python-based SOCKS5 proxy designed for Windows that provides i
 
 - Python 3.7+
 - `pip` for installing dependencies
+- (Optional) ZeroTier One client installed, for ZeroTier status monitoring.
+
+## Configuration
+
+The application can be configured using a `.env` file in the root directory. Copy the `.env.example` file to `.env` to get started.
+
+- **ZT_API:** The URL of the ZeroTier local API.
+- **ZT_TOKEN:** Your ZeroTier API authentication token. If left blank, the application will attempt to read it from the default installation path on Windows.
 
 ## Installation
 
