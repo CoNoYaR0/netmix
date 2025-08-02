@@ -58,7 +58,15 @@ def train_model(data_path='netmix_training_data.csv', model_path='model.joblib')
     logging.info(f"Training XGBClassifier on {len(X_train)} samples...")
     # XGBoost is good for imbalanced datasets, scale_pos_weight is a key param
     # scale_pos_weight = count(negative class) / count(positive class)
-    scale_pos_weight = (y_train == 0).sum() / (y_train == 1).sum()
+    num_neg = (y_train == 0).sum()
+    num_pos = (y_train == 1).sum()
+
+    if num_pos == 0 or num_neg == 0:
+        logging.warning("Training data contains only one class after splitting. Model may be ineffective. Using default scale_pos_weight=1.")
+        scale_pos_weight = 1
+    else:
+        scale_pos_weight = num_neg / num_pos
+
     model = xgb.XGBClassifier(
         n_estimators=100,
         random_state=42,
