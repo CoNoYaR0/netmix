@@ -21,10 +21,13 @@ This is the current phase, focused on implementing advanced networking features 
 - **Planned Features:**
     - **True Bandwidth Aggregation:** Emulate Speedify-like bonding locally using ZeroTier or other methods.
     - **Per-Interface Traffic Shaping:** Track and manage bandwidth usage per interface.
-    - **Remote Dashboard Access:** Add optional HTTPS and authentication to the web dashboard.
     - **Enhanced AI Engine:** Move from a heuristic to a true ML model (XGBoost or lightweight LLM).
     - **Full Offline Mode:** Ensure the application can run without any reliance on external APIs.
     - **Packaging & Distribution:** Finalize the `.exe` package and create an auto-updater.
+
+### Phase 4: Hardening & Remote Access (Planned)
+- **Planned Features:**
+    - **Remote Dashboard Access:** Add optional HTTPS and authentication to the web dashboard.
 
 ---
 
