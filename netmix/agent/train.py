@@ -56,16 +56,20 @@ def train_model(data_path='netmix_training_data.csv', model_path='model.joblib')
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
     logging.info(f"Training XGBClassifier on {len(X_train)} samples...")
-    # XGBoost is good for imbalanced datasets, scale_pos_weight is a key param
-    # scale_pos_weight = count(negative class) / count(positive class)
+
+    # Safeguard against training on a single class, which XGBoost's wrapper dislikes.
     num_neg = (y_train == 0).sum()
     num_pos = (y_train == 1).sum()
 
     if num_pos == 0 or num_neg == 0:
-        logging.warning("Training data contains only one class after splitting. Model may be ineffective. Using default scale_pos_weight=1.")
-        scale_pos_weight = 1
-    else:
-        scale_pos_weight = num_neg / num_pos
+        logging.error("Training data contains only one class after splitting. This is likely due to a highly imbalanced dataset where one interface is always superior.")
+        logging.error("Cannot train a meaningful model on a single outcome. Please gather more diverse data or check interface configurations.")
+        logging.error("Skipping model training.")
+        return
+
+    # XGBoost is good for imbalanced datasets, scale_pos_weight is a key param
+    # scale_pos_weight = count(negative class) / count(positive class)
+    scale_pos_weight = num_neg / num_pos
 
     model = xgb.XGBClassifier(
         n_estimators=100,
