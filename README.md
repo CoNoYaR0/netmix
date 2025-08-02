@@ -1,14 +1,32 @@
-# Multipath SOCKS5 Proxy
+# Netmix: An Intelligent Local Multipath Proxy
 
-This project is a Python-based SOCKS5 proxy designed for Windows that provides intelligent, local multipath routing over multiple network interfaces (e.g., Wi-Fi and 4G/LTE). It aims to improve network resilience and performance by dynamically routing traffic based on interface health.
+Netmix is a Python-based SOCKS5 proxy designed for Windows that provides intelligent, local multipath routing over multiple network interfaces (e.g., Wi-Fi and 4G/LTE). It aims to improve network resilience and performance by dynamically routing traffic based on interface health and, eventually, simulating true network bonding.
 
-## Features
+---
 
-- **SOCKS5 Compliant:** Acts as a standard SOCKS5 proxy, compatible with most network applications.
-- **Dynamic Interface Detection:** Automatically discovers all active, non-loopback network interfaces on startup.
-- **Latency-Based Routing:** The proxy periodically checks the latency of each interface by connecting to a reliable host. New connections are routed through the interface with the currently lowest latency.
-- **Automatic Failover:** If a connection attempt on the best interface fails, it is marked as "down" (given a high latency penalty), and the proxy instantly retries the connection on the next-best interface.
-- **Live CLI Dashboard:** An integrated, real-time command-line dashboard (built with `curses`) displays the status, current latency, and active connection count for each interface.
+## Project Roadmap & Status
+
+This project is being developed in phases. Here is a summary of our progress and future plans.
+
+### ✅ Phase 1: MVP SOCKS5 Proxy (Complete)
+The initial phase focused on building a functional, intelligent SOCKS5 proxy.
+- **Features:** Dynamic interface discovery, latency-based routing, automatic failover, and a basic `curses` CLI dashboard.
+
+### ✅ Phase 2: Architectural Refactor & Web UI (Complete)
+This phase focused on creating a more robust and extensible application architecture.
+- **Features:** Reorganized the project into a `netmix` package, created a central `ConnectionManager` for health data, implemented a placeholder `AIPredictor`, and replaced the CLI dashboard with a real-time **Web Dashboard** built with Flask and Socket.IO. The ZeroTier integration was also upgraded from a CLI wrapper to a direct **REST API client**. Numerous stability bugs were also fixed.
+
+### 🚧 Phase 3: Network Bonding & Advanced Intelligence (In Progress)
+This is the current phase, focused on implementing advanced networking features and making the application production-ready.
+- **Planned Features:**
+    - **True Bandwidth Aggregation:** Emulate Speedify-like bonding locally using ZeroTier or other methods.
+    - **Per-Interface Traffic Shaping:** Track and manage bandwidth usage per interface.
+    - **Remote Dashboard Access:** Add optional HTTPS and authentication to the web dashboard.
+    - **Enhanced AI Engine:** Move from a heuristic to a true ML model (XGBoost or lightweight LLM).
+    - **Full Offline Mode:** Ensure the application can run without any reliance on external APIs.
+    - **Packaging & Distribution:** Finalize the `.exe` package and create an auto-updater.
+
+---
 
 ## Prerequisites
 
@@ -22,6 +40,7 @@ The application can be configured using a `.env` file in the root directory. Cop
 
 - **ZT_API:** The URL of the ZeroTier local API.
 - **ZT_TOKEN:** Your ZeroTier API authentication token. If left blank, the application will attempt to read it from the default installation path on Windows.
+- **ZEROTIER_NETWORK_ID:** The 16-character ID of the ZeroTier network you want to automatically join on startup.
 
 ## Installation
 
@@ -31,7 +50,7 @@ The application can be configured using a `.env` file in the root directory. Cop
     ```sh
     pip install -r requirements.txt
     ```
-> **Note:** The `requirements.txt` file includes `windows-curses`, which is necessary for the dashboard to run on Windows. This dependency is installed only on Windows systems.
+> **Note:** The `requirements.txt` file includes `windows-curses`, which is necessary for the dashboard to run on Windows.
 
 ## How to Run
 
@@ -43,7 +62,6 @@ python -m netmix.main
 (Use `python3` if that is your default interpreter)
 
 - The proxy server will start listening on `127.0.0.1:1080`.
-- The proxy server will start listening on `127.0.0.1:1080`.
 - The web dashboard will be available at **http://127.0.0.1:5000**.
 - All log messages are written to `netmix.log` in the root directory.
 
@@ -53,7 +71,7 @@ To use the proxy, configure your application's SOCKS5 proxy settings to point to
 
 Once you run the application, open your web browser and navigate to **http://127.0.0.1:5000**.
 
-- The dashboard provides a real-time view of each detected network interface.
+- The dashboard provides a real-time view of each detected network interface and the ZeroTier client status.
 - It displays the status (`GOOD`, `DEGRADED`, `DOWN`), average latency, success rate, failure counts, and the number of active connections for each interface.
 - The data updates automatically via WebSockets.
 - To stop the entire application, press **`Ctrl+C`** in the terminal where it is running.
