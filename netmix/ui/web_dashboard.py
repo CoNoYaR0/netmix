@@ -1,4 +1,5 @@
 import logging
+import os
 from flask import Flask, render_template
 from flask_socketio import SocketIO
 import threading
@@ -51,9 +52,22 @@ def background_data_emitter():
 
         if zerotier_api:
             try:
+                managed_network_id = os.getenv('ZEROTIER_NETWORK_ID')
+                managed_network_details = None
+                if managed_network_id:
+                    try:
+                        # This call might fail if the node hasn't fully joined yet
+                        managed_network_details = zerotier_api.get_network(managed_network_id)
+                    except Exception:
+                        managed_network_details = {
+                            'id': managed_network_id,
+                            'status': 'NOT_FOUND',
+                            'error': 'Network details not yet available. May be connecting.'
+                        }
+
                 payload['zerotier_data'] = {
                     'status': zerotier_api.get_status(),
-                    'networks': zerotier_api.list_networks()
+                    'managed_network': managed_network_details
                 }
             except Exception as e:
                 logging.error(f"Could not fetch ZeroTier data for dashboard: {e}")
