@@ -8,7 +8,7 @@ from netmix.core.connection_manager import ConnectionManager
 from netmix.agent.ai_predictor import AIPredictor
 from netmix.core.socks_proxy import SocksProxy
 from netmix.ui.web_dashboard import run_web_dashboard
-from netmix.core.zerotier_manager import ZeroTierManager
+from netmix.agent.zerotier_api import ZeroTierAPI
 
 async def main_async(conn_manager, predictor, proxy):
     """The main asynchronous entry point for the application."""
@@ -49,12 +49,16 @@ def main_sync():
     conn_manager = ConnectionManager(interfaces)
     predictor = AIPredictor()
     proxy = SocksProxy('127.0.0.1', 1080, conn_manager, predictor)
-    zt_manager = ZeroTierManager()
+    try:
+        zt_api = ZeroTierAPI()
+    except Exception as e:
+        logging.error(f"Failed to initialize ZeroTier API: {e}. Continuing without it.")
+        zt_api = None
 
     # --- Start the Web Dashboard in a separate thread ---
     web_thread = threading.Thread(
         target=run_web_dashboard,
-        args=(conn_manager, zt_manager),
+        args=(conn_manager, zt_api),
         daemon=True
     )
     web_thread.start()

@@ -14,15 +14,15 @@ socketio = SocketIO(app, async_mode='threading')
 
 # Global references, to be set by the main app.
 connection_manager = None
-zerotier_manager = None
+zerotier_api = None
 
-def run_web_dashboard(conn_manager, zt_manager, host='127.0.0.1', port=5000):
+def run_web_dashboard(conn_manager, zt_api, host='127.0.0.1', port=5000):
     """
     Sets the managers and runs the Flask app.
     """
-    global connection_manager, zerotier_manager
+    global connection_manager, zerotier_api
     connection_manager = conn_manager
-    zerotier_manager = zt_manager
+    zerotier_api = zt_api
 
     # Start the background data emitter thread
     emitter_thread = threading.Thread(target=background_data_emitter, daemon=True)
@@ -49,11 +49,15 @@ def background_data_emitter():
                 health_data[iface]['latencies'] = list(health_data[iface]['latencies'])
             payload['health_data'] = health_data
 
-        if zerotier_manager:
-            payload['zerotier_data'] = {
-                'status': zerotier_manager.get_status(),
-                'networks': zerotier_manager.list_networks()
-            }
+        if zerotier_api:
+            try:
+                payload['zerotier_data'] = {
+                    'status': zerotier_api.get_status(),
+                    'networks': zerotier_api.list_networks()
+                }
+            except Exception as e:
+                logging.error(f"Could not fetch ZeroTier data for dashboard: {e}")
+                payload['zerotier_data'] = {'error': str(e)}
 
         logging.debug("Emitting data to web clients.")
         socketio.emit('update', payload, namespace='/dashboard')
